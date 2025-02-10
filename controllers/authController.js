@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const db = require("../config/db");
+require("dotenv").config();
 
 const SECRET_KEY = process.env.SECRET_KEY || "secret";
 const transporter = nodemailer.createTransport({
