@@ -22,7 +22,9 @@ const transporter = nodemailer.createTransport({
 exports.register = async (req, res) => {
   const { name, email, password, confirmPassword } = req.body;
   if (password !== confirmPassword) return res.status(400).json({ message: "Password tidak cocok" });
+  if (name || email || password || confirmPassword) return res.status(400).json({ message: "Data tidak boleh kosong" });
   const hashedPassword = await bcrypt.hash(password, 10);
+
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   db.run(
     "INSERT INTO users (name, email, password, otp) VALUES (?, ?, ?, ?)",
@@ -49,6 +51,7 @@ exports.login = (req, res) => {
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
     if (!user || !(await bcrypt.compare(password, user.password))) return res.status(400).json({ message: "Email atau password salah" });
     if (!user.isVerif) return res.status(400).json({ message: "Akun belum diverifikasi" });
+    if (!password === password) return res.status(400).json({ message: "Password salah" });
     const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: "1h" });
     res.json({ status: "success", message: "Login berhasil", data: user, token });
   });
