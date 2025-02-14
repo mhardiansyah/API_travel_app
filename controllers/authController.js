@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
 const db = require("../config/db");
@@ -50,5 +51,37 @@ exports.login = (req, res) => {
     if (!user.isVerif) return res.status(400).json({ message: "Akun belum diverifikasi" });
     const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: "1h" });
     res.json({ status: "success", message: "Login berhasil", data: user, token });
+  });
+};
+
+////
+
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  // Cek apakah email ada di database
+  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
+    if (!user) return res.status(400).json({ message: "Email tidak ditemukan" });
+
+    // Generate password baru: 5 huruf + 3 angka
+    const newPassword = crypto.randomBytes(5).toString("hex").slice(0, 5) + Math.floor(100 + Math.random() * 900);
+    
+    // Hash password baru
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password di database
+    db.run("UPDATE users SET password = ? WHERE email = ?", [hashedPassword, email], (err) => {
+      if (err) return res.status(500).json({ message: "Gagal mengupdate password" });
+
+      // Kirim email dengan password baru
+      transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: "Reset Password",
+        text: `Password baru Anda: ${newPassword}`,
+      });
+
+      res.json({ message: "Password baru telah dikirim ke email Anda" });
+    });
   });
 };
